@@ -1,0 +1,6 @@
+# Upstream ascii-invaders (Thomas Munro): github.com/macdice/ascii-invaders
+# at this commit (master, 31 Aug 2021); fetched at build time, never kept here.
+UP_URL=https://github.com/macdice/ascii-invaders
+UP_COMMIT=05685db4b640caafda8f153576f98a691bdbf3dc
+UP_VERSION=git20210831
+PORT_VERSION=20210831-gfos1

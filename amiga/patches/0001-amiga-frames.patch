@@ -1,0 +1,61 @@
+diff -ru a/invaders.c b/invaders.c
+--- a/invaders.c
++++ b/invaders.c
+@@ -30,7 +30,9 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <sys/time.h>
++#ifndef __amigaos__ /* no SIGALRM: curses waits out the frames */
+ #include <sys/signal.h>
++#endif
+ #include <time.h>
+ 
+ static const Sprite sprites[][2][2] = {
+@@ -265,7 +267,9 @@
+     int screenCols;         // screen columns
+     int screenRows;         // screen rows
+     int timer;              // timer used to switch between game states
++#ifndef __amigaos__
+     struct itimerval myTimer;   // alarm signal timer
++#endif
+ } game;
+ 
+ struct {
+@@ -320,10 +324,12 @@
+ 
+ int main(int argc, char **argv) {
+ 
++#ifndef __amigaos__ /* the Amiga's console font is Latin-1: no box art */
+     if (argc > 1 && strcmp(argv[1], "--unicode") == 0) {
+ 	setlocale(LC_CTYPE, "");
+ 	ctype = UNICODE;
+     }
++#endif
+ 
+     // set up curses library
+     initscr();
+@@ -363,6 +369,7 @@
+     // to wait for a key with a timeout, and run handleTimer when
+     // enough time for one frame has elapsed.
+ 
++#ifndef __amigaos__
+     // set up realtime interrupt timer and signals
+     game.myTimer.it_value.tv_sec = 0;
+     game.myTimer.it_value.tv_usec = 1000000 / FPS;
+@@ -370,9 +377,16 @@
+     game.myTimer.it_interval.tv_usec = 1000000 / FPS;
+     setitimer(ITIMER_REAL, &game.myTimer, NULL);
+     signal(SIGALRM, handleTimer);
++#endif
+ 
+     for (;;) {
++#ifdef __amigaos__
++        /* the next key, running handleTimer for each frame (1/FPS s)
++         * that passes while waiting: the select() the TODO above asks for */
++        switch(amiga_frames_getch(handleTimer, FPS)) {
++#else
+         switch(getch()) {
++#endif
+             case 'q':   
+                     cleanUp(0);
+                     break;
