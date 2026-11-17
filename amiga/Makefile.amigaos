@@ -1,0 +1,68 @@
+# ascii-invaders for GFOS (AmigaOS 3.2 with GFOpenUp), 68040/68060: Thomas
+# Munro's curses Space Invaders in its own 80 x 24 console window, in
+# colour. No SDL, no ACGame, no GFOpenGPU.
+#
+#   make -f amiga/Makefile.amigaos -j4 UP=/path/to/ascii-invaders [STOVE=...]
+#
+# UP is upstream at the commit package/asciiinvaders.lock names, with
+# amiga/patches applied (package/build-amiga.sh does both). STOVE is a
+# GFOpenAmigaGCC 16.2.0-open6 stove (prefix/ has the compiler and the NDK).
+# The game draws through amiga/curses.c (the part of ncurses it uses, sent
+# to the console as ANSI with the eight pens for colour); its frames, a
+# SIGALRM timer upstream, are run by amiga/frames.c between keys (curses'
+# timeout: dos.library WaitForChar, DateStamp for the clock);
+# amiga/console_amiga.c opens the window and reads the keys.
+#
+# Output: build/amigaos/AsciiInvaders/ (the drawer: AsciiInvaders, ReadMe,
+# upstream's README, the licence, GlowIcons), build/amigaos/AsciiInvaders.info
+# and Install-AsciiInvaders beside them.
+
+UP      ?= ../ascii-invaders
+VERSION ?= git20210831
+STOVE   ?= $(HOME)/AmiCradle/stoves/os32-gcc16-open6
+PREFIX  ?= $(STOVE)/prefix
+CC      = $(PREFIX)/bin/m68k-amigaos-gcc
+CPU     ?= -m68040 -msoft-float
+# -fno-tree-loop-distribute-patterns: GCC 16's loop miscompile.
+OPT     ?= -Os -fomit-frame-pointer -fno-tree-loop-distribute-patterns
+
+UPFLAGS = -noixemul $(OPT) $(CPU) -std=gnu99 -w -D__amigaos__ \
+          -include amiga/include/amiga_prelude.h -Iamiga/include -Iamiga
+MYFLAGS = -noixemul $(OPT) $(CPU) -std=gnu99 -Wall \
+          -DAMIGA_GAME_TITLE='"ascii-invaders"' -Iamiga/include -Iamiga
+LDFLAGS = -noixemul $(CPU)
+
+BUILD   = build/amigaos
+OBJ     = $(BUILD)/obj
+OUT     = $(BUILD)/AsciiInvaders
+
+PORT    = curses keys console_amiga frames
+
+all: $(OUT)/AsciiInvaders package
+
+$(OBJ)/up/invaders.o: $(UP)/invaders.c $(UP)/invaders.h $(wildcard amiga/include/*.h)
+	@mkdir -p $(dir $@)
+	$(CC) $(UPFLAGS) -c -o $@ $<
+
+$(OBJ)/port/%.o: amiga/%.c $(wildcard amiga/*.h amiga/include/*.h)
+	@mkdir -p $(dir $@)
+	$(CC) $(MYFLAGS) -c -o $@ $<
+
+$(OUT)/AsciiInvaders: $(OBJ)/up/invaders.o $(PORT:%=$(OBJ)/port/%.o)
+	@mkdir -p $(OUT)
+	$(CC) $(LDFLAGS) -o $@ $^
+
+package: $(OUT)/AsciiInvaders AMIGA_PORT.md
+	cp AMIGA_PORT.md $(OUT)/ReadMe
+	cp $(UP)/README.md $(OUT)/ReadMe-ascii-invaders
+	cp $(UP)/LICENSE $(OUT)/LICENSE.txt
+	cp amiga/icons/AsciiInvaders.info amiga/icons/ReadMe.info $(OUT)/
+	cp amiga/icons/ReadMe.info $(OUT)/ReadMe-ascii-invaders.info
+	cp amiga/icons/ReadMe.info $(OUT)/LICENSE.txt.info
+	cp amiga/icons/AsciiInvaders-drawer.info $(BUILD)/AsciiInvaders.info
+	cp amiga/Install-AsciiInvaders amiga/Install-AsciiInvaders.info $(BUILD)/
+
+clean:
+	rm -rf $(BUILD)
+
+.PHONY: all package clean
