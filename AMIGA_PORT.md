@@ -17,9 +17,8 @@ no SDL, no ACGame, no GFOpenGPU.
 
 How it was ported
 -----------------
-The game is built from upstream as it is, with our curses
-(amiga/curses.c, shared with our other console ports), which gains
-deleteln() and insertln() here. Upstream moves everything from a SIGALRM
+The game is built from upstream as it is, with our curses, GFOpenCurses
+(DalsinAI/gfopencurses, the library our console ports share). Upstream moves everything from a SIGALRM
 interval timer, 15 times a second, while main() waits in getch(), and its
 own TODO asks for a wait with a timeout instead: amiga/frames.c waits in
 curses only until the next frame is due (dos.library WaitForChar, with

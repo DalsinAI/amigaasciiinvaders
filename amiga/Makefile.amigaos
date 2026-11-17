@@ -7,17 +7,19 @@
 # UP is upstream at the commit package/asciiinvaders.lock names, with
 # amiga/patches applied (package/build-amiga.sh does both). STOVE is a
 # GFOpenAmigaGCC 16.2.0-open6 stove (prefix/ has the compiler and the NDK).
-# The game draws through amiga/curses.c (the part of ncurses it uses, sent
-# to the console as ANSI with the eight pens for colour); its frames, a
-# SIGALRM timer upstream, are run by amiga/frames.c between keys (curses'
-# timeout: dos.library WaitForChar, DateStamp for the clock);
-# amiga/console_amiga.c opens the window and reads the keys.
+# The game draws through GFOpenCurses (DalsinAI/gfopencurses, at the
+# commit package/gfopencurses.lock names, built first: GFOPENCURSES is its
+# checkout), which opens the window, reads the keys and sends the screen as
+# ANSI with the eight pens for colour; its frames, a SIGALRM timer
+# upstream, are run by amiga/frames.c between keys (curses' timeout:
+# dos.library WaitForChar, DateStamp for the clock).
 #
 # Output: build/amigaos/AsciiInvaders/ (the drawer: AsciiInvaders, ReadMe,
 # upstream's README, the licence, GlowIcons), build/amigaos/AsciiInvaders.info
 # and Install-AsciiInvaders beside them.
 
 UP      ?= ../ascii-invaders
+GFOPENCURSES ?= ../gfopencurses
 VERSION ?= git20210831
 STOVE   ?= $(HOME)/AmiCradle/stoves/os32-gcc16-open6
 PREFIX  ?= $(STOVE)/prefix
@@ -27,16 +29,16 @@ CPU     ?= -m68040 -msoft-float
 OPT     ?= -Os -fomit-frame-pointer -fno-tree-loop-distribute-patterns
 
 UPFLAGS = -noixemul $(OPT) $(CPU) -std=gnu99 -w -D__amigaos__ \
-          -include amiga/include/amiga_prelude.h -Iamiga/include -Iamiga
+          -include amiga/include/amiga_prelude.h -I$(GFOPENCURSES)/include -Iamiga/include -Iamiga
 MYFLAGS = -noixemul $(OPT) $(CPU) -std=gnu99 -Wall \
-          -DAMIGA_GAME_TITLE='"ascii-invaders"' -Iamiga/include -Iamiga
+          -I$(GFOPENCURSES)/include -Iamiga/include -Iamiga
 LDFLAGS = -noixemul $(CPU)
 
 BUILD   = build/amigaos
 OBJ     = $(BUILD)/obj
 OUT     = $(BUILD)/AsciiInvaders
 
-PORT    = curses keys console_amiga frames
+PORT    = frames
 
 all: $(OUT)/AsciiInvaders package
 
@@ -44,13 +46,13 @@ $(OBJ)/up/invaders.o: $(UP)/invaders.c $(UP)/invaders.h $(wildcard amiga/include
 	@mkdir -p $(dir $@)
 	$(CC) $(UPFLAGS) -c -o $@ $<
 
-$(OBJ)/port/%.o: amiga/%.c $(wildcard amiga/*.h amiga/include/*.h)
+$(OBJ)/port/%.o: amiga/%.c $(wildcard amiga/include/*.h)
 	@mkdir -p $(dir $@)
 	$(CC) $(MYFLAGS) -c -o $@ $<
 
 $(OUT)/AsciiInvaders: $(OBJ)/up/invaders.o $(PORT:%=$(OBJ)/port/%.o)
 	@mkdir -p $(OUT)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $(LDFLAGS) -o $@ $^ -L$(GFOPENCURSES)/lib -lgfopencurses
 
 package: $(OUT)/AsciiInvaders AMIGA_PORT.md
 	cp AMIGA_PORT.md $(OUT)/ReadMe
